@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { createChart, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts';
+import { createChart, type ISeriesApi, type UTCTimestamp, LineSeries } from 'lightweight-charts';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 
 const chartRef = ref<HTMLDivElement | null>(null);
@@ -36,12 +36,12 @@ onMounted(() => {
     rightPriceScale: { borderColor: '#e2e8f0' },
   });
 
-  lineSeries = chart.addLineSeries({
+  lineSeries = chart.addSeries(LineSeries, {
     color: '#3b82f6',
     lineWidth: 2,
   });
 
-  lineSeries.setData(data.map((item) => ({ time: toTimestamp(item.time), value: item.value })));
+  lineSeries!.setData(data.map((item) => ({ time: toTimestamp(item.time), value: item.value })));
 
   const resizeObserver = new ResizeObserver((entries) => {
     const entry = entries[0];

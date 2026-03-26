@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "echarts": "^6.0.0",
     "lightweight-charts": "^5.0.8",
     "pinia": "^3.0.3",
     "vant": "^4.9.20",
