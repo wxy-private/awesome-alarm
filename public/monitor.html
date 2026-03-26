@@ -1,0 +1,692 @@
+<html lang="en" vid="0"><head vid="1">
+    <meta charset="UTF-8" vid="2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" vid="3">
+    <title vid="4">System Monitor</title>
+    <style vid="5">
+        :root {
+            
+            --bg-deep: #020203;
+            --neon-cyan: #00E5FF;
+            --neon-cyan-dim: rgba(0, 229, 255, 0.2);
+            --neon-magenta: #FF4081;
+            --neon-magenta-dim: rgba(255, 64, 129, 0.2);
+            --neon-orange: #FF9100;
+            --neon-orange-dim: rgba(255, 145, 0, 0.2);
+            --neon-blue: #2962FF;
+            --white: #FFFFFF;
+            --text-dim: rgba(255, 255, 255, 0.5);
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            
+            
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 8px;
+            --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--white);
+            font-family: var(--font-stack);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        
+        .ambient-glow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .ambient-glow::before, .ambient-glow::after, .ambient-glow .glow-tl {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+        }
+
+        .ambient-glow::before {
+            width: 80vw;
+            height: 80vw;
+            background: radial-gradient(circle, var(--neon-cyan), transparent 70%);
+            top: -20vh;
+            left: -20vw;
+            opacity: 0.25;
+        }
+
+        .ambient-glow::after {
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, var(--neon-magenta), transparent 70%);
+            bottom: -10vh;
+            right: -10vw;
+            opacity: 0.2;
+        }
+
+        .ambient-glow .glow-tl {
+            width: 40vw;
+            height: 40vw;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15), transparent 70%);
+            top: 5vh;
+            left: 5vw;
+            filter: blur(80px);
+        }
+
+        
+        .app-container {
+            position: relative;
+            z-index: 1;
+            padding: 0 16px 32px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            padding: 24px 0 16px 0;
+            background: linear-gradient(180deg, rgba(2, 2, 3, 0.9) 0%, rgba(2, 2, 3, 0.7) 60%, rgba(2, 2, 3, 0) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .header-stats {
+            font-size: 13px;
+            color: var(--text-dim);
+            display: flex;
+            gap: 12px;
+        }
+
+        .stat-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .dot.cyan { background: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); }
+        .dot.magenta { background: var(--neon-magenta); box-shadow: 0 0 8px var(--neon-magenta); }
+        .dot.orange { background: var(--neon-orange); box-shadow: 0 0 8px var(--neon-orange); }
+
+        
+        .card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            transition: transform 0.2s ease, background 0.2s ease;
+            box-shadow: 
+                inset 0 1px 1px rgba(255, 255, 255, 0.1),
+                0 4px 30px rgba(0, 0, 0, 0.3);
+            max-height: 25vh;
+        }
+
+        .card:active {
+            transform: scale(0.98);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .app-identity {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .app-name {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-id {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-dim);
+            letter-spacing: 0.5px;
+        }
+
+        .response-time {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .rt-value {
+            font-family: var(--font-mono);
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: -1px;
+            line-height: 1;
+        }
+
+        .rt-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        
+        .text-cyan { color: var(--neon-cyan); }
+        .text-magenta { color: var(--neon-magenta); }
+
+        
+        .trend-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .section-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .trend-chart {
+            width: 100%;
+            height: 40px;
+        }
+
+        .trend-chart svg {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        
+        .donuts-section {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .donut-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .donut-wrapper {
+            position: relative;
+            width: 44px;
+            height: 44px;
+        }
+
+        .donut-wrapper svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+            overflow: visible;
+        }
+
+        .donut-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.05);
+            stroke-width: 4;
+        }
+
+        .donut-progress {
+            fill: none;
+            stroke-width: 4;
+            stroke-linecap: round;
+            
+            stroke-dasharray: 113.097;
+            transition: stroke-dashoffset 1s ease-out;
+            filter: drop-shadow(0 0 4px currentColor);
+        }
+
+        .donut-label {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .donut-value {
+            font-family: var(--font-mono);
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .donut-title {
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        
+        @keyframes pulse-magenta {
+            0% { box-shadow: 0 0 0 0 rgba(255, 64, 129, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 64, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 64, 129, 0); }
+        }
+
+        @keyframes pulse-orange {
+            0% { box-shadow: 0 0 0 0 rgba(255, 145, 0, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 145, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 145, 0, 0); }
+        }
+
+        .dot.magenta {
+            animation: pulse-magenta 2s infinite;
+        }
+
+        .dot.orange {
+            animation: pulse-orange 2s infinite;
+        }
+
+        
+        .svg-defs {
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+
+    </style>
+</head>
+<body vid="6">
+
+    
+    <svg class="svg-defs" aria-hidden="true" vid="7">
+        <defs vid="8">
+            <linearGradient id="grad-cyan" x1="0%" y1="0%" x2="100%" y2="100%" vid="9">
+                <stop offset="0%" stop-color="#00E5FF" vid="10"></stop>
+                <stop offset="100%" stop-color="#2962FF" vid="11"></stop>
+            </linearGradient>
+            <linearGradient id="grad-magenta" x1="0%" y1="0%" x2="100%" y2="100%" vid="12">
+                <stop offset="0%" stop-color="#FF4081" vid="13"></stop>
+                <stop offset="100%" stop-color="#7C4DFF" vid="14"></stop>
+            </linearGradient>
+            
+            <linearGradient id="grad-cyan-fade" x1="0%" y1="0%" x2="0%" y2="100%" vid="15">
+                <stop offset="0%" stop-color="rgba(0, 229, 255, 0.2)" vid="16"></stop>
+                <stop offset="100%" stop-color="rgba(41, 98, 255, 0)" vid="17"></stop>
+            </linearGradient>
+            <linearGradient id="grad-magenta-fade" x1="0%" y1="0%" x2="0%" y2="100%" vid="18">
+                <stop offset="0%" stop-color="rgba(255, 64, 129, 0.2)" vid="19"></stop>
+                <stop offset="100%" stop-color="rgba(124, 77, 255, 0)" vid="20"></stop>
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <div class="ambient-glow" vid="21"><div class="glow-tl" vid="22"></div></div>
+
+    <div class="app-container" vid="23">
+        
+        <header class="header" vid="24">
+            <h1 vid="25">Monitor</h1>
+            <div class="header-stats" vid="26">
+                <div class="stat-badge" vid="27"><div class="dot cyan" vid="28"></div> 18 正常</div>
+                <div class="stat-badge" vid="29"><div class="dot orange" vid="30"></div> 1 警戒</div>
+                <div class="stat-badge" vid="31"><div class="dot magenta" vid="32"></div> 2 严重</div>
+            </div>
+        </header>
+
+        
+        <div class="card" vid="33">
+            <div class="card-header" vid="34">
+                <div class="app-identity" vid="35">
+                    <div class="app-name" vid="36">
+                        <div class="dot cyan" vid="37"></div>
+                        Payment Gateway
+                    </div>
+                    <div class="app-id" vid="38">APP-PRD-001</div>
+                </div>
+                <div class="response-time" vid="39">
+                    <div class="rt-value text-cyan" vid="40">42</div>
+                    <div class="rt-label" vid="41">响应时间 (ms)</div>
+                </div>
+            </div>
+
+            <div class="trend-section" vid="42">
+                <div class="section-label" vid="43">交易量 (1小时)</div>
+                <div class="trend-chart" vid="44">
+                    
+                    <svg viewBox="0 0 200 40" preserveAspectRatio="none" vid="45">
+                        <path d="M0,40 L0,25 C20,25 30,15 50,15 C70,15 80,30 100,20 C120,10 130,5 150,15 C170,25 180,10 200,5 L200,40 Z" fill="url(#grad-cyan-fade)" vid="46"></path>
+                        <path d="M0,25 C20,25 30,15 50,15 C70,15 80,30 100,20 C120,10 130,5 150,15 C170,25 180,10 200,5" fill="none" stroke="url(#grad-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 2px 4px rgba(0, 229, 255, 0.3))" vid="47"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="donuts-section" vid="48">
+                <div class="donut-container" vid="49">
+                    <div class="donut-wrapper" vid="50">
+                        <svg viewBox="0 0 44 44" vid="51">
+                            <circle class="donut-bg" cx="22" cy="22" r="18" vid="52"></circle>
+                            
+                            <circle class="donut-progress" cx="22" cy="22" r="18" stroke="url(#grad-cyan)" style="stroke-dashoffset: 1.13;" vid="53"></circle>
+                        </svg>
+                    </div>
+                    <div class="donut-label" vid="54">
+                        <span class="donut-value" vid="55">99.9%</span>
+                        <span class="donut-title" vid="56">响应率</span>
+                    </div>
+                </div>
+                <div class="donut-container" vid="57">
+                    <div class="donut-wrapper" vid="58">
+                        <svg viewBox="0 0 44 44" vid="59">
+                            <circle class="donut-bg" cx="22" cy="22" r="18" vid="60"></circle>
+                            
+                            <circle class="donut-progress" cx="22" cy="22" r="18" stroke="url(#grad-cyan)" style="stroke-dashoffset: 2.26;" vid="61"></circle>
+                        </svg>
+                    </div>
+                    <div class="donut-label" vid="62">
+                        <span class="donut-value" vid="63">98.5%</span>
+                        <span class="donut-title" vid="64">正确率</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="card" vid="65">
+            <div class="card-header" vid="66">
+                <div class="app-identity" vid="67">
+                    <div class="app-name" vid="68">
+                        <div class="dot magenta" vid="69"></div>
+                        User Auth Service
+                    </div>
+                    <div class="app-id" vid="70">APP-PRD-042</div>
+                </div>
+                <div class="response-time" vid="71">
+                    <div class="rt-value text-magenta" vid="72">845</div>
+                    <div class="rt-label" vid="73">响应时间 (ms)</div>
+                </div>
+            </div>
+
+            <div class="trend-section" vid="74">
+                <div class="section-label" vid="75">交易量 (1小时)</div>
+                <div class="trend-chart" vid="76">
+                    <svg viewBox="0 0 200 40" preserveAspectRatio="none" vid="77">
+                        <path d="M0,40 L0,15 C20,15 30,25 50,20 C70,15 80,5 100,10 C120,15 130,25 150,20 C170,15 180,35 200,30 L200,40 Z" fill="url(#grad-magenta-fade)" vid="78"></path>
+                        <path d="M0,15 C20,15 30,25 50,20 C70,15 80,5 100,10 C120,15 130,25 150,20 C170,15 180,35 200,30" fill="none" stroke="url(#grad-magenta)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 2px 4px rgba(255, 64, 129, 0.3))" vid="79"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="donuts-section" vid="80">
+                <div class="donut-container" vid="81">
+                    <div class="donut-wrapper" vid="82">
+                        <svg viewBox="0 0 44 44" vid="83">
+                            <circle class="donut-bg" cx="22" cy="22" r="18" vid="84"></circle>
+                            
+                            <circle class="donut-progress" cx="22" cy="22" r="18" stroke="url(#grad-magenta)" style="stroke-dashoffset: 16.96;" vid="85"></circle>
+                        </svg>
+                    </div>
+                    <div class="donut-label" vid="86">
+                        <span class="donut-value text-magenta" vid="87">85.0%</span>
+                        <span class="donut-title" vid="88">响应率</span>
+                    </div>
+                </div>
+                <div class="donut-container" vid="89">
+                    <div class="donut-wrapper" vid="90">
+                        <svg viewBox="0 0 44 44" vid="91">
+                            <circle class="donut-bg" cx="22" cy="22" r="18" vid="92"></circle>
+                            
+                            <circle class="donut-progress" cx="22" cy="22" r="18" stroke="url(#grad-cyan)" style="stroke-dashoffset: 10.17;" vid="93"></circle>
+                        </svg>
+                    </div>
+                    <div class="donut-label" vid="94">
+                        <span class="donut-value" vid="95">91.2%</span>
+                        <span class="donut-title" vid="96">正确率</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="card" vid="97">
+            <div class="card-header" vid="98">
+                <div class="app-identity" vid="99">
+                    <div class="app-name" vid="100">
+                        <div class="dot cyan" vid="101"></div>
+                        Inventory DB
+                    </div>
+                    <div class="app-id" vid="102">APP-DB-011</div>
+                </div>
+                <div class="response-time" vid="103">
+                    <div class="rt-value text-cyan" vid="104">12</div>
+                    <div class="rt-label" vid="105">响应时间 (ms)</div>
+                </div>
+            </div>
+
+            <div class="trend-section" vid="106">
+                <div class="section-label" vid="107">交易量 (1小时)</div>
+                <div class="trend-chart" vid="108">
+                    <svg viewBox="0 0 200 40" preserveAspectRatio="none" vid="109">
+                        <path d="M0,40 L0,30 C20,30 30,35 50,30 C70,25 80,30 100,25 C120,20 130,25 150,20 C170,15 180,10 200,15 L200,40 Z" fill="url(#grad-cyan-fade)" vid="110"></path>
+                        <path d="M0,30 C20,30 30,35 50,30 C70,25 80,30 100,25 C120,20 130,25 150,20 C170,15 180,10 200,15" fill="none" stroke="url(#grad-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vid="111"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="donuts-section" vid="112">
+                <div class="donut-container" vid="113">
+                    <div class="donut-wrapper" vid="114">
+                        <svg viewBox="0 0 44 44" vid="115">
+                            <circle class="donut-bg" cx="22" cy="22" r="18" vid="116"></circle>
+                            <circle class="donut-progress" cx="22" cy="22" r="18" stroke="url(#grad-cyan)" style="stroke-dashoffset: 0;" vid="117"></circle>
+                        </svg>
+                    </div>
+                    <div class="donut-label" vid="118">
+                        <span class="donut-value" vid="119">100%</span>
+                        <span class="donut-title" vid="120">响应率</span>
+                    </div>
+                </div>
+                <div class="donut-container" vid="121">
+                    <div class="donut-wrapper" vid="122">
+                        <svg viewBox="0 0 44 44" vid="123">
+                            <circle class="donut-bg" cx="22" cy="22" r="18" vid="124"></circle>
+                            <circle class="donut-progress" cx="22" cy="22" r="18" stroke="url(#grad-cyan)" style="stroke-dashoffset: 0;" vid="125"></circle>
+                        </svg>
+                    </div>
+                    <div class="donut-label" vid="126">
+                        <span class="donut-value" vid="127">100%</span>
+                        <span class="donut-title" vid="128">正确率</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="card" vid="129">
+            <div class="card-header" vid="130">
+                <div class="app-identity" vid="131">
+                    <div class="app-name" vid="132">
+                        <div class="dot cyan" vid="133"></div>
+                        Recommendation Engine
+                    </div>
+                    <div class="app-id" vid="134">APP-ML-004</div>
+                </div>
+                <div class="response-time" vid="135">
+                    <div class="rt-value text-cyan" vid="136">156</div>
+                    <div class="rt-label" vid="137">响应时间 (ms)</div>
+                </div>
+            </div>
+
+            <div class="trend-section" vid="138">
+                <div class="section-label" vid="139">交易量 (1小时)</div>
+                <div class="trend-chart" vid="140">
+                    <svg viewBox="0 0 200 40" preserveAspectRatio="none" vid="141">
+                        <path d="M0,40 L0,20 C20,10 30,25 50,15 C70,5 80,35 100,20 C120,5 130,25 150,15 C170,5 180,15 200,10 L200,40 Z" fill="url(#grad-cyan-fade)" vid="142"></path>
+                        <path d="M0,20 C20,10 30,25 50,15 C70,5 80,35 100,20 C120,5 130,25 150,15 C170,5 180,15 200,10" fill="none" stroke="url(#grad-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vid="143"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="donuts-section" vid="144">
+                <div class="donut-container" vid="145">
+                    <div class="donut-wrapper" vid="146">
+                        <svg viewBox="0 0 44 44" vid="147">
+                            <circle class="donut-bg" cx="22" cy="22" r="18" vid="148"></circle>
+                            <circle class="donut-progress" cx="22" cy="22" r="18" stroke="url(#grad-cyan)" style="stroke-dashoffset: 4.5;" vid="149"></circle>
+                        </svg>
+                    </div>
+                    <div class="donut-label" vid="150">
+                        <span class="donut-value" vid="151">96.0%</span>
+                        <span class="donut-title" vid="152">响应率</span>
+                    </div>
+                </div>
+                <div class="donut-container" vid="153">
+                    <div class="donut-wrapper" vid="154">
+                        <svg viewBox="0 0 44 44" vid="155">
+                            <circle class="donut-bg" cx="22" cy="22" r="18" vid="156"></circle>
+                            <circle class="donut-progress" cx="22" cy="22" r="18" stroke="url(#grad-cyan)" style="stroke-dashoffset: 5.6;" vid="157"></circle>
+                        </svg>
+                    </div>
+                    <div class="donut-label" vid="158">
+                        <span class="donut-value" vid="159">95.0%</span>
+                        <span class="donut-title" vid="160">正确率</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="card" vid="161">
+            <div class="card-header" vid="162">
+                <div class="app-identity" vid="163">
+                    <div class="app-name" vid="164">
+                        <div class="dot orange" vid="165"></div>
+                        Notification Service
+                    </div>
+                    <div class="app-id" vid="166">APP-MSG-088</div>
+                </div>
+                <div class="response-time" vid="167">
+                    <div class="rt-value text-magenta" vid="168">512</div>
+                    <div class="rt-label" vid="169">响应时间 (ms)</div>
+                </div>
+            </div>
+
+            <div class="trend-section" vid="170">
+                <div class="section-label" vid="171">交易量 (1小时)</div>
+                <div class="trend-chart" vid="172">
+                    <svg viewBox="0 0 200 40" preserveAspectRatio="none" vid="173">
+                        <path d="M0,40 L0,5 C20,5 30,10 50,5 C70,5 80,35 100,38 C120,38 130,35 150,38 C170,38 180,39 200,39 L200,40 Z" fill="url(#grad-magenta-fade)" vid="174"></path>
+                        <path d="M0,5 C20,5 30,10 50,5 C70,5 80,35 100,38 C120,38 130,35 150,38 C170,38 180,39 200,39" fill="none" stroke="url(#grad-magenta)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vid="175"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="donuts-section" vid="176">
+                <div class="donut-container" vid="177">
+                    <div class="donut-wrapper" vid="178">
+                        <svg viewBox="0 0 44 44" vid="179">
+                            <circle class="donut-bg" cx="22" cy="22" r="18" vid="180"></circle>
+                            <circle class="donut-progress" cx="22" cy="22" r="18" stroke="url(#grad-magenta)" style="stroke-dashoffset: 45.2;" vid="181"></circle>
+                        </svg>
+                    </div>
+                    <div class="donut-label" vid="182">
+                        <span class="donut-value text-magenta" vid="183">60.0%</span>
+                        <span class="donut-title" vid="184">响应率</span>
+                    </div>
+                </div>
+                <div class="donut-container" vid="185">
+                    <div class="donut-wrapper" vid="186">
+                        <svg viewBox="0 0 44 44" vid="187">
+                            <circle class="donut-bg" cx="22" cy="22" r="18" vid="188"></circle>
+                            <circle class="donut-progress" cx="22" cy="22" r="18" stroke="url(#grad-magenta)" style="stroke-dashoffset: 28.2;" vid="189"></circle>
+                        </svg>
+                    </div>
+                    <div class="donut-label" vid="190">
+                        <span class="donut-value text-magenta" vid="191">75.0%</span>
+                        <span class="donut-title" vid="192">正确率</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="card" vid="193">
+            <div class="card-header" vid="194">
+                <div class="app-identity" vid="195">
+                    <div class="app-name" vid="196"><div class="dot cyan" vid="197"></div>CDN Edge Node US</div>
+                    <div class="app-id" vid="198">INF-CDN-001</div>
+                </div>
+                <div class="response-time" vid="199">
+                    <div class="rt-value text-cyan" vid="200">8</div>
+                    <div class="rt-label" vid="201">响应时间 (ms)</div>
+                </div>
+            </div>
+            <div class="trend-section" vid="202">
+                <div class="trend-chart" vid="203">
+                    <svg viewBox="0 0 200 40" preserveAspectRatio="none" vid="204">
+                        <path d="M0,25 Q50,15 100,25 T200,25" fill="none" stroke="url(#grad-cyan)" stroke-width="2" stroke-linecap="round" vid="205"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="donuts-section" vid="206">
+                <div class="donut-container" vid="207">
+                    <div class="donut-wrapper" vid="208">
+                        <svg viewBox="0 0 44 44" vid="209"><circle class="donut-bg" cx="22" cy="22" r="18" vid="210"></circle><circle class="donut-progress" cx="22" cy="22" r="18" stroke="url(#grad-cyan)" style="stroke-dashoffset: 0;" vid="211"></circle></svg>
+                    </div>
+                    <div class="donut-label" vid="212"><span class="donut-value" vid="213">100%</span><span class="donut-title" vid="214">响应率</span></div>
+                </div>
+                <div class="donut-container" vid="215">
+                    <div class="donut-wrapper" vid="216">
+                        <svg viewBox="0 0 44 44" vid="217"><circle class="donut-bg" cx="22" cy="22" r="18" vid="218"></circle><circle class="donut-progress" cx="22" cy="22" r="18" stroke="url(#grad-cyan)" style="stroke-dashoffset: 0;" vid="219"></circle></svg>
+                    </div>
+                    <div class="donut-label" vid="220"><span class="donut-value" vid="221">100%</span><span class="donut-title" vid="222">正确率</span></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+</body></html>
