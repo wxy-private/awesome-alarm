@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 type Tone = 'cyan' | 'magenta' | 'orange';
 
@@ -20,9 +21,21 @@ interface CardItem {
   linePath: string;
 }
 
+const router = useRouter();
 const keyword = ref('');
 const isSearching = ref(false);
 const keyboardOffset = ref(0);
+
+const goToDetail = (card: CardItem) => {
+  router.push({
+    name: 'serverMonitor',
+    query: {
+      appName: card.name,
+      appId: card.appId,
+      tone: card.tone
+    }
+  });
+};
 
 const cards: CardItem[] = [
   {
@@ -225,6 +238,8 @@ onBeforeUnmount(() => {
         v-for="card in filteredCards"
         :key="card.key"
         class="card"
+        @click="goToDetail(card)"
+        style="cursor: pointer;"
       >
         <div class="card-header">
           <div class="app-identity">

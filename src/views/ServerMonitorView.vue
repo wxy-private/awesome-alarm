@@ -1,6 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
+
+const route = useRoute()
+
+const appName = computed(() => route.query.appName as string || '交易系统')
+const appId = computed(() => route.query.appId as string || 'APP-PRD-001')
+const tone = computed(() => route.query.tone as string || 'cyan')
+
+const getToneColor = (t: string) => {
+  if (t === 'magenta') return '#FF4081'
+  if (t === 'orange') return '#FF9100'
+  return '#00D4AA'
+}
+
+const themeColor = computed(() => getToneColor(tone.value))
+const gradientClass = computed(() => {
+  if (tone.value === 'magenta') return 'bg-[radial-gradient(circle,rgba(255,64,129,0.15)_0%,transparent_70%)]'
+  if (tone.value === 'orange') return 'bg-[radial-gradient(circle,rgba(255,145,0,0.15)_0%,transparent_70%)]'
+  return 'bg-[radial-gradient(circle,rgba(0,212,170,0.15)_0%,transparent_70%)]'
+})
 
 interface ServiceItem {
   key: string
@@ -241,13 +261,13 @@ const refreshAllData = (minutes: number) => {
   const newApi3 = generateData(Math.max(10, points / 5), 10, 50)
 
   const newRefs = [
-    { data: newVolume, type: 'line' as const, color: '#00D4AA' },
-    { data: newResp, type: 'line' as const, color: '#00D4AA' },
-    { data: newSuccess, type: 'line' as const, color: '#00D4AA' },
-    { data: newTps, type: 'line' as const, color: '#00D4AA' },
-    { data: newApi1, type: 'area' as const, color: '#00D4AA' },
-    { data: newApi2, type: 'area' as const, color: '#00D4AA' },
-    { data: newApi3, type: 'area' as const, color: '#00D4AA' }
+    { data: newVolume, type: 'line' as const, color: themeColor.value },
+    { data: newResp, type: 'line' as const, color: themeColor.value },
+    { data: newSuccess, type: 'line' as const, color: themeColor.value },
+    { data: newTps, type: 'line' as const, color: themeColor.value },
+    { data: newApi1, type: 'area' as const, color: themeColor.value },
+    { data: newApi2, type: 'area' as const, color: themeColor.value },
+    { data: newApi3, type: 'area' as const, color: themeColor.value }
   ]
 
   chartInstances.forEach((c, i) => {
@@ -288,13 +308,13 @@ const selectTimeRange = (val: number) => {
 
 onMounted(() => {
   const refs = [
-    { data: volumeData, color: '#00D4AA', type: 'line' as const },
-    { data: responseData, color: '#00D4AA', type: 'line' as const },
-    { data: successData, color: '#00D4AA', type: 'line' as const },
-    { data: tpsData, color: '#00D4AA', type: 'line' as const },
-    { data: api1Data, color: '#00D4AA', type: 'area' as const },
-    { data: api2Data, color: '#00D4AA', type: 'area' as const },
-    { data: api3Data, color: '#00D4AA', type: 'area' as const },
+    { data: volumeData, color: themeColor.value, type: 'line' as const },
+    { data: responseData, color: themeColor.value, type: 'line' as const },
+    { data: successData, color: themeColor.value, type: 'line' as const },
+    { data: tpsData, color: themeColor.value, type: 'line' as const },
+    { data: api1Data, color: themeColor.value, type: 'area' as const },
+    { data: api2Data, color: themeColor.value, type: 'area' as const },
+    { data: api3Data, color: themeColor.value, type: 'area' as const },
   ]
 
   nextTick(() => {
@@ -348,17 +368,17 @@ const goBack = () => {
       <div class="app-hero-card mt-2">
         <div class="hero-card-glow"></div>
         <div class="glass-card p-4 relative overflow-hidden">
-          <div class="hero-card-glow-inner"></div>
+          <div class="hero-card-glow-inner" :class="gradientClass"></div>
           
-          <div class="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-full bg-[rgba(50,215,75,0.1)] border border-[rgba(50,215,75,0.2)]">
-            <div class="w-1.5 h-1.5 rounded-full bg-[#32D74B] shadow-[0_0_8px_rgba(50,215,75,0.8)]"></div>
-            <span class="text-[10px] text-[#32D74B] font-medium tracking-wider">正常运行</span>
+          <div class="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-full border" :style="{ backgroundColor: themeColor + '15', borderColor: themeColor + '33' }">
+            <div class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: themeColor, boxShadow: `0 0 8px ${themeColor}` }"></div>
+            <span class="text-[10px] font-medium tracking-wider" :style="{ color: themeColor }">正常运行</span>
           </div>
 
           <div class="flex flex-col gap-3">
             <div class="pr-20">
-              <h1 class="text-xl font-bold tracking-tight">交易系统</h1>
-              <p class="text-xs text-tertiary mt-0.5 tracking-wider">交易研发中心</p>
+              <h1 class="text-xl font-bold tracking-tight">{{ appName }}</h1>
+              <p class="text-xs text-tertiary mt-0.5 tracking-wider">{{ appId }}</p>
             </div>
             <div class="flex flex-col gap-1.5">
               <div class="flex items-center gap-2 text-sm text-secondary">
@@ -378,7 +398,8 @@ const goBack = () => {
               v-for="tr in timeRanges"
               :key="tr.value"
               class="text-[10px] px-2.5 py-1 rounded-md transition-all duration-200"
-              :class="activeTimeRange === tr.value ? 'bg-[#00D4AA] text-[#050505] font-bold shadow-[0_0_8px_rgba(0,212,170,0.4)]' : 'text-secondary hover:text-primary hover:bg-[rgba(255,255,255,0.05)]'"
+              :class="activeTimeRange === tr.value ? 'text-[#050505] font-bold shadow-lg' : 'text-secondary hover:text-primary hover:bg-[rgba(255,255,255,0.05)]'"
+              :style="activeTimeRange === tr.value ? { backgroundColor: themeColor, boxShadow: `0 0 8px ${themeColor}66` } : {}"
               @click="selectTimeRange(tr.value)"
             >
               {{ tr.label }}
@@ -444,7 +465,7 @@ const goBack = () => {
         <div class="section-title mb-1">趋势图</div>
         <div class="grid grid-cols-2 gap-1.5">
           <div class="glass-card p-1.5 relative overflow-hidden flex flex-col">
-            <div class="absolute -top-5 -right-5 w-20 h-20 bg-[radial-gradient(circle,rgba(0,212,170,0.1)_0%,transparent_70%)] blur-[20px] pointer-events-none"></div>
+            <div class="absolute -top-5 -right-5 w-20 h-20 blur-[20px] pointer-events-none" :class="gradientClass"></div>
             <div class="text-[11px] text-secondary pl-0.5">交易量</div>
             <div class="flex-1 min-h-[75px]">
               <div ref="chart0Ref" class="w-full h-full"></div>
@@ -452,7 +473,7 @@ const goBack = () => {
           </div>
 
           <div class="glass-card p-1.5 relative overflow-hidden flex flex-col">
-            <div class="absolute -top-5 -right-5 w-20 h-20 bg-[radial-gradient(circle,rgba(0,212,170,0.1)_0%,transparent_70%)] blur-[20px] pointer-events-none"></div>
+            <div class="absolute -top-5 -right-5 w-20 h-20 blur-[20px] pointer-events-none" :class="gradientClass"></div>
             <div class="text-[11px] text-secondary pl-0.5">响应时间</div>
             <div class="flex-1 min-h-[75px]">
               <div ref="chart1Ref" class="w-full h-full"></div>
@@ -460,7 +481,7 @@ const goBack = () => {
           </div>
 
           <div class="glass-card p-1.5 relative overflow-hidden flex flex-col">
-            <div class="absolute -top-5 -right-5 w-20 h-20 bg-[radial-gradient(circle,rgba(0,212,170,0.1)_0%,transparent_70%)] blur-[20px] pointer-events-none"></div>
+            <div class="absolute -top-5 -right-5 w-20 h-20 blur-[20px] pointer-events-none" :class="gradientClass"></div>
             <div class="text-[11px] text-secondary pl-0.5">成功率</div>
             <div class="flex-1 min-h-[75px]">
               <div ref="chart2Ref" class="w-full h-full"></div>
@@ -468,7 +489,7 @@ const goBack = () => {
           </div>
 
           <div class="glass-card p-1.5 relative overflow-hidden flex flex-col">
-            <div class="absolute -top-5 -right-5 w-20 h-20 bg-[radial-gradient(circle,rgba(0,212,170,0.1)_0%,transparent_70%)] blur-[20px] pointer-events-none"></div>
+            <div class="absolute -top-5 -right-5 w-20 h-20 blur-[20px] pointer-events-none" :class="gradientClass"></div>
             <div class="text-[11px] text-secondary pl-0.5">TPS</div>
             <div class="flex-1 min-h-[75px]">
               <div ref="chart3Ref" class="w-full h-full"></div>
@@ -621,7 +642,7 @@ const goBack = () => {
   right: 0;
   bottom: 0;
   background:
-      radial-gradient(ellipse 80% 50% at 20% 40%, rgba(0, 212, 170, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse 80% 50% at 20% 40%, v-bind('themeColor + "15"'), transparent 50%),
       radial-gradient(ellipse 60% 40% at 80% 20%, rgba(217, 39, 176, 0.06) 0%, transparent 50%),
       radial-gradient(ellipse 50% 60% at 50% 80%, rgba(74, 54, 255, 0.05) 0%, transparent 50%);
   pointer-events: none;
@@ -709,7 +730,7 @@ const goBack = () => {
 .hero-card-glow::before {
   left: 5%;
   right: 50%;
-  background: var(--neon-pink);
+  background: v-bind('themeColor');
 }
 
 .hero-card-glow::after {
@@ -724,7 +745,6 @@ const goBack = () => {
   right: -30%;
   width: 200px;
   height: 200px;
-  background: radial-gradient(circle, rgba(0, 212, 170, 0.15) 0%, transparent 70%);
   filter: blur(40px);
   pointer-events: none;
 }
@@ -759,8 +779,9 @@ const goBack = () => {
 }
 
 .service-chip.active {
-  border-color: rgba(217, 39, 176, 0.5);
-  background: linear-gradient(180deg, rgba(217, 39, 176, 0.08) 0%, rgba(217, 39, 176, 0.03) 100%), var(--surface-dark);
+  border-color: v-bind('themeColor + "80"');
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 12px v-bind('themeColor + "15"');
 }
 
 .service-chip.tone-cyan.active {
